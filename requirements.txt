@@ -1,0 +1,9 @@
+numpy
+pandas
+scikit-learn
+dill
+fastapi
+jinja2
+python-multipart
+uvicorn
+dvc
