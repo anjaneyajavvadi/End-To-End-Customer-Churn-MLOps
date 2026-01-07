@@ -1,5 +1,5 @@
+import os
 import sys
-import json
 import joblib
 import pandas as pd
 
@@ -8,47 +8,61 @@ from src.utils.exception_handler import CustomException
 
 
 class PredictPipeline:
-    def __init__(self, pipeline_path: str, metadata_path: str):
+    def __init__(
+        self,
+        model_path: str = "models/model.joblib",
+        preprocessor_path: str = "data/features/preprocessor.joblib",
+        threshold: float = 0.5,
+    ):
         try:
-            logging.info("🚀 Loading inference pipeline")
+            logging.info("🚀 Loading inference artifacts")
 
-            self.pipeline = joblib.load(pipeline_path)
+            if not os.path.exists(model_path):
+                raise FileNotFoundError(f"Missing model → {model_path}")
 
-            with open(metadata_path, "r") as f:
-                self.metadata = json.load(f)
+            if not os.path.exists(preprocessor_path):
+                raise FileNotFoundError(f"Missing preprocessor → {preprocessor_path}")
 
-            self.threshold = self.metadata.get("threshold", 0.5)
+            self.model = joblib.load(model_path)
+            self.preprocessor = joblib.load(preprocessor_path)
+            self.threshold = threshold
 
-            logging.info(
-                f"✅ Pipeline loaded | Threshold={self.threshold}"
-            )
+            logging.info("✅ Inference artifacts loaded")
 
         except Exception as e:
             raise CustomException(e, sys)
 
-    def predict(self, input_df: pd.DataFrame):
+    def _normalize_columns(self, df: pd.DataFrame) -> pd.DataFrame:
+        df = df.copy()
+        df.columns = (
+            df.columns
+            .str.strip()
+            .str.lower()
+            .str.replace(" ", "_")
+        )
+        return df
+
+    def predict(self, input_df: pd.DataFrame) -> pd.DataFrame:
         try:
             logging.info("🔮 Running churn inference")
 
-            probs = self.pipeline.predict_proba(input_df)[:, 1]
+            input_df = self._normalize_columns(input_df)
+
+            X = self.preprocessor.transform(input_df)
+            probs = self.model.predict_proba(X)[:, 1]
             preds = (probs >= self.threshold).astype(int)
 
-            results = pd.DataFrame({
+            return pd.DataFrame({
                 "churn_probability": probs,
-                "churn_prediction": preds
+                "churn_prediction": preds,
             })
-
-            return results
 
         except Exception as e:
             raise CustomException(e, sys)
 
 
 if __name__ == "__main__":
-    predictor = PredictPipeline(
-        pipeline_path="artifacts/churn_pipeline.joblib",
-        metadata_path="artifacts/model_metadata.json"
-    )
+    predictor = PredictPipeline()
 
     sample = pd.DataFrame([{
         "Age": 35,

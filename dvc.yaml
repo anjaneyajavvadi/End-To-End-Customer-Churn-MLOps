@@ -21,4 +21,4 @@ stages:
     outs:
     - models/model.joblib
     metrics:
-    - metric.json
+    - metrics.json

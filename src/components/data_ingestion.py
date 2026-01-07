@@ -1,8 +1,8 @@
 import os
 import sys
-import pandas as pd
 from dataclasses import dataclass
-from sklearn.model_selection import train_test_split
+
+import pandas as pd
 
 from src.utils.logger import logging
 from src.utils.exception_handler import CustomException
@@ -10,9 +10,12 @@ from src.utils.exception_handler import CustomException
 
 @dataclass
 class DataIngestionConfig:
+    raw_dir: str = os.path.join("data", "raw")
+    processed_dir: str = os.path.join("data", "processed")
+
     raw_train_path: str = os.path.join("data", "raw", "train.csv")
     raw_test_path: str = os.path.join("data", "raw", "test.csv")
-    processed_dir: str = os.path.join("data", "processed")
+
     processed_train_path: str = os.path.join("data", "processed", "train.csv")
     processed_test_path: str = os.path.join("data", "processed", "test.csv")
 
@@ -21,34 +24,20 @@ class DataIngestion:
     def __init__(self):
         self.config = DataIngestionConfig()
 
-    def _validate_raw_data(self, df: pd.DataFrame):
-        """Basic schema validation."""
-        required_columns = {
-            "Age",
-            "Tenure",
-            "Usage Frequency",
-            "Support Calls",
-            "Payment Delay",
-            "Total Spend",
-            "Last Interaction",
-            "Gender",
-            "Contract Length",
-            "Subscription Type",
-            "Churn"
+        # schema AFTER normalization
+        self.required_columns = {
+            "age",
+            "tenure",
+            "usage_frequency",
+            "support_calls",
+            "payment_delay",
+            "total_spend",
+            "last_interaction",
+            "gender",
+            "contract_length",
+            "subscription_type",
+            "churn",
         }
-
-        missing = required_columns - set(df.columns)
-        if missing:
-            raise ValueError(f"Missing required columns: {missing}")
-    def _handle_missing_target(self, df: pd.DataFrame, split_name: str):
-        missing = df["Churn"].isna().sum()
-        if missing > 0:
-            logging.warning(
-                f"{split_name}: Dropping {missing} rows with missing Churn labels"
-            )
-            df = df.dropna(subset=["Churn"])
-        return df
-
 
     def _normalize_columns(self, df: pd.DataFrame) -> pd.DataFrame:
         df.columns = (
@@ -59,45 +48,67 @@ class DataIngestion:
         )
         return df
 
+    def _validate_schema(self, df: pd.DataFrame, split_name: str):
+        missing = self.required_columns - set(df.columns)
+        if missing:
+            raise ValueError(
+                f"{split_name}: Missing required columns: {missing}"
+            )
+
+    def _handle_missing_target(self, df: pd.DataFrame, split_name: str) -> pd.DataFrame:
+        before = len(df)
+        df = df.dropna(subset=["churn"])
+        after = len(df)
+
+        if before != after:
+            logging.warning(
+                f"{split_name}: Dropped {before - after} rows with missing churn"
+            )
+
+        return df
+
+    def _load_csv(self, path: str, split_name: str) -> pd.DataFrame:
+        if not os.path.exists(path):
+            raise FileNotFoundError(f"{split_name}: File not found → {path}")
+
+        logging.info(f"{split_name}: Loading data from {path}")
+        return pd.read_csv(path)
+
     def run(self):
         try:
-            logging.info("🚀 Starting data ingestion (pre-split mode)")
+            logging.info("🚀 Starting data ingestion stage")
 
-            if not os.path.exists(self.config.raw_train_path):
-                raise FileNotFoundError(f"Missing {self.config.raw_train_path}")
+            # load
+            train_df = self._load_csv(self.config.raw_train_path, "TRAIN")
+            test_df = self._load_csv(self.config.raw_test_path, "TEST")
 
-            if not os.path.exists(self.config.raw_test_path):
-                raise FileNotFoundError(f"Missing {self.config.raw_test_path}")
-
-            train_df = pd.read_csv(self.config.raw_train_path)
-            test_df = pd.read_csv(self.config.raw_test_path)
-
-            train_df = self._handle_missing_target(train_df, "TRAIN")
-            test_df = self._handle_missing_target(test_df, "TEST")
-
+            # normalize
             train_df = self._normalize_columns(train_df)
             test_df = self._normalize_columns(test_df)
 
+            # validate
+            self._validate_schema(train_df, "TRAIN")
+            self._validate_schema(test_df, "TEST")
+
+            # clean
+            train_df = self._handle_missing_target(train_df, "TRAIN")
+            test_df = self._handle_missing_target(test_df, "TEST")
+
             logging.info(
-                f"Loaded train shape={train_df.shape}, test shape={test_df.shape}"
+                f"TRAIN shape={train_df.shape} | TEST shape={test_df.shape}"
             )
 
+            # write
             os.makedirs(self.config.processed_dir, exist_ok=True)
+
             train_df.to_csv(self.config.processed_train_path, index=False)
             test_df.to_csv(self.config.processed_test_path, index=False)
 
-            return (
-                self.config.processed_train_path,
-                self.config.processed_test_path
-            )
+            logging.info("✅ Data ingestion completed successfully")
 
         except Exception as e:
             raise CustomException(e, sys)
 
 
 if __name__ == "__main__":
-    ingestion = DataIngestion()
-    train_path, test_path = ingestion.run()
-    print("✅ Data ingestion completed")
-    print("Train:", train_path)
-    print("Test:", test_path)
+    DataIngestion().run()
