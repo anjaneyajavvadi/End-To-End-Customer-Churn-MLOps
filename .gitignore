@@ -30,4 +30,5 @@ models/**
 
 # MLflow
 mlruns/
-/data
+/models
+/metrics.json

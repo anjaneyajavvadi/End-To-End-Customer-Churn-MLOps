@@ -1,0 +1,59 @@
+schema: '2.0'
+stages:
+  ingest:
+    cmd: python -m src.components.data_ingestion
+    deps:
+    - path: data/raw
+      hash: md5
+      md5: cb480550163b52ab622f5d75ac8725c0.dir
+      size: 26730974
+      nfiles: 2
+    - path: src/components/data_ingestion.py
+      hash: md5
+      md5: e54f7fad2ac5d555d841df46cf945580
+      size: 3554
+    outs:
+    - path: data/processed
+      hash: md5
+      md5: 8d37a461d71effbf2a1c4a274a61cecc.dir
+      size: 34187729
+      nfiles: 2
+  transform:
+    cmd: python -m src.components.data_transformation
+    deps:
+    - path: data/processed
+      hash: md5
+      md5: 8d37a461d71effbf2a1c4a274a61cecc.dir
+      size: 34187729
+      nfiles: 2
+    - path: src/components/data_transformation.py
+      hash: md5
+      md5: ad825eab35620774ea6a9e3470695f01
+      size: 4175
+    outs:
+    - path: data/features
+      hash: md5
+      md5: 5b1dd4e3e8c5d4ee0ddad21f57f64fd0.dir
+      size: 64671228
+      nfiles: 5
+  train:
+    cmd: python -m src.components.model_trainer
+    deps:
+    - path: data/features
+      hash: md5
+      md5: 5b1dd4e3e8c5d4ee0ddad21f57f64fd0.dir
+      size: 64671228
+      nfiles: 5
+    - path: src/components/model_trainer.py
+      hash: md5
+      md5: 3a01ba9cf56ce216c9592c45df5bb3c2
+      size: 2980
+    outs:
+    - path: metrics.json
+      hash: md5
+      md5: 05b478671ef663136a08f116f57becc0
+      size: 70
+    - path: models/model.joblib
+      hash: md5
+      md5: f2fe1b98480b6bd0c7e8e426aed467c2
+      size: 959

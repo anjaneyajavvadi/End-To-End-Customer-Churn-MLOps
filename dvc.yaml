@@ -1,0 +1,24 @@
+stages:
+  ingest:
+    cmd: python -m src.components.data_ingestion
+    deps:
+    - data/raw
+    - src/components/data_ingestion.py
+    outs:
+    - data/processed
+  transform:
+    cmd: python -m src.components.data_transformation
+    deps:
+    - data/processed
+    - src/components/data_transformation.py
+    outs:
+    - data/features
+  train:
+    cmd: python -m src.components.model_trainer
+    deps:
+    - data/features
+    - src/components/model_trainer.py
+    outs:
+    - models/model.joblib
+    metrics:
+    - metric.json
