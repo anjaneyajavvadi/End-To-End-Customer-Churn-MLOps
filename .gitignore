@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.pyc
+.env
+.venv/
+venv/
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Logs
+*.log
+
+# Jupyter
+.ipynb_checkpoints/
+
+# DVC
+.dvc/cache/
+
+# Ignore data BUT allow DVC metafiles
+data/**
+!data/*.dvc
+
+# Models tracked by DVC
+models/**
+!models/*.dvc
+
+# MLflow
+mlruns/
+/data
