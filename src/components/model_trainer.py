@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 import numpy as np
 import joblib
-from sklearn.linear_model import LogisticRegression
+from xgboost import XGBClassifier
 from sklearn.metrics import roc_auc_score, average_precision_score
 
 import mlflow
@@ -52,7 +52,10 @@ class ModelTrainer:
             with mlflow.start_run():
 
             
-                mlflow.log_param("model_type", "LogisticRegression")
+                mlflow.log_param("model_type", "XGBoost")
+                mlflow.log_param("n_estimators", 300)
+                mlflow.log_param("max_depth", 6)
+                mlflow.log_param("learning_rate", 0.05)
                 mlflow.log_param("max_iter", self.config.max_iter)
                 mlflow.log_param("class_weight", "balanced")
                 mlflow.log_param("random_state", self.config.random_state)
@@ -70,11 +73,18 @@ class ModelTrainer:
                 )
 
             
-                model = LogisticRegression(
-                    max_iter=self.config.max_iter,
-                    class_weight="balanced",
+                model = XGBClassifier(
+                    n_estimators=300,
+                    max_depth=6,
+                    learning_rate=0.05,
+                    subsample=0.8,
+                    colsample_bytree=0.8,
+                    objective="binary:logistic",
+                    eval_metric="auc",
                     random_state=self.config.random_state,
+                    n_jobs=-1,
                 )
+
 
                 model.fit(X_train, y_train)
 
@@ -104,7 +114,7 @@ class ModelTrainer:
                 with open(self.config.metrics_path, "w") as f:
                     json.dump(metrics, f, indent=2)
 
-                # log artifacts to MLflow
+                
                 mlflow.log_artifact(self.config.metrics_path)
                 mlflow.sklearn.log_model(
                     model,

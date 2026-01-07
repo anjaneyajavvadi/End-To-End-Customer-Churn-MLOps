@@ -46,14 +46,14 @@ stages:
       nfiles: 5
     - path: src/components/model_trainer.py
       hash: md5
-      md5: d98fac7d950f17fac77783d849ca14d1
-      size: 3956
+      md5: 6c3b30496c3b04baf0d4261d3003ff34
+      size: 4278
     outs:
     - path: metrics.json
       hash: md5
-      md5: 05b478671ef663136a08f116f57becc0
+      md5: 2381c36a2f729707709a98bde5220e06
       size: 70
     - path: models/model.joblib
       hash: md5
-      md5: f2fe1b98480b6bd0c7e8e426aed467c2
-      size: 959
+      md5: 9dd6a9c75ddb0f9094a4dacd71c8d3ee
+      size: 585131
